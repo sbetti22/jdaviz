@@ -3582,6 +3582,7 @@ class PrivateApplication(VuetifyTemplate, HubListener):
         # registry will be populated at import
         if self.config in CONFIGS_WITH_LOADERS:
             import jdaviz.core.loaders  # noqa
+            import jdaviz.core.loaders.parsers  # noqa
             # Determine which loaders to disable
             disabled_loaders = self.state.settings.get('disabled_loaders')
             if disabled_loaders is None:

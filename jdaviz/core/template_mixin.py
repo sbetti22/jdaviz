@@ -576,6 +576,7 @@ class LoadersMixin(VuetifyTemplate, HubListener):
 
         # ensure registry has been populated
         import jdaviz.core.loaders  # noqa
+        import jdaviz.core.loaders.parsers  # noqa
         from jdaviz.core.registries import loader_resolver_registry
         loader_items = []
         # Determine which loaders to disable
@@ -6336,6 +6337,7 @@ class Table(PluginSubcomponent):
         """Set up the object loader for 'Load into App' functionality."""
         # ensure the loaders are in registy
         import jdaviz.core.loaders  # noqa
+        import jdaviz.core.loaders.parsers  # noqa
 
         def close_accordion():
             self.loader_panel_ind = None
