@@ -22,17 +22,20 @@ datas = [
 
 block_cipher = None
 
+icon_file = '../assets/app.ico' if sys.platform == 'win32' else '../assets/app.icns' 
+
 
 a = Analysis(
     ["jdaviz-cli-entrypoint.py"],
     pathex=[],
     binaries=[],
     datas=datas,
-    hiddenimports=["rich.logging", 'glue.plugins.coordinate_helpers', 'glue.plugins.coordinate_helpers.link_helpers'],
+    hiddenimports=["rich.logging", 'glue.plugins.coordinate_helpers', 'glue.plugins.coordinate_helpers.link_helpers',
+    'asdf', 'asdf.schema'],
     hookspath=["hooks"],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['libiconv.2.dylib'],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
@@ -59,6 +62,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=codesign_identity,
     entitlements_file="entitlements.plist",
+    icon=icon_file if sys.platform.startswith('win') else None, # Windows
 )
 coll = COLLECT(
     exe,
@@ -75,7 +79,7 @@ app = BUNDLE(
     exe,
     coll,
     name="jdaviz.app",
-    icon=None,
+    icon=icon_file if sys.platform.startswith('darwin') else None,
     entitlements_file="entitlements.plist",
     bundle_identifier="edu.stsci.jdaviz",
     version=jdaviz.__version__,
