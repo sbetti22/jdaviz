@@ -91,6 +91,9 @@ New Features
 
 - Importers can now support multiple targets when filtering format options based on target. [#4345]
 
+- Updated documentation for the application and caching, updated the jdaviz logo, 
+  and improved the .dmg installation process [#4337]
+
 Mosviz
 ^^^^^^
 
