@@ -3,7 +3,7 @@ import csv
 import os
 from pathlib import Path
 import warnings
-
+import numpy as np
 from astropy import units as u
 from astropy.io import fits
 from astropy.io.registry import IORegistryError
@@ -236,7 +236,6 @@ def mos_spec1d_parser(app, data_obj, data_labels=None,
         if len(data_obj) == 1:
             if _check_is_file(data_obj[0]):
                 data_obj = SpectrumList.read(data_obj[0])
-
     if data_labels is None:
         data_labels = [f"1D Spectrum {i}" for i in range(len(data_obj))]
     elif len(data_obj) != len(data_labels):
@@ -743,9 +742,9 @@ def _id_files_by_datamodl(label_dict, filepaths, catalog_key=None):
 
             if datamodl is None:
                 continue
-            if datamodl == 'MultiSpecModel' and dispersion == 'C':
+            if (datamodl == 'MultiSpecModel' or datamodl == 'WFSSMultiSpecModel') and dispersion == 'C':
                 label_dict['1D Spectra C'].append(fp)
-            elif datamodl == 'MultiSpecModel' and dispersion == 'R':
+            elif (datamodl == 'MultiSpecModel' or datamodl == 'WFSSMultiSpecModel') and dispersion == 'R':
                 label_dict['1D Spectra R'].append(fp)
             elif datamodl == 'MultiSlitModel' and dispersion == 'C':
                 label_dict['2D Spectra C'].append(fp)
@@ -887,6 +886,7 @@ def mos_niriss_parser(app, data_dir, instrument=None,
 
             # save HDUs in file that correspond with sources in catalog
             with fits.open(fname, memmap=False) as temp:
+                sourceid = []
                 sci_hdus = []
                 wav_hdus = {}
                 for i in range(len(temp)):
@@ -896,7 +896,10 @@ def mos_niriss_parser(app, data_dir, instrument=None,
                                 if (temp[i].header["SOURCEID"] not in cat_id_dict.keys()):
                                     continue
                             sci_hdus.append(i)
+                            sourceid.append(temp[i].header["SOURCEID"])
                             wav_hdus[i] = ('WAVELENGTH', temp[i].header['EXTVER'])
+                sourceid_idx = np.argsort(np.array(sourceid))
+                sci_hdus = np.array(sci_hdus)[sourceid_idx]
 
                 for sci in sci_hdus:
                     if temp[sci].header["SPORDER"] == 1:
@@ -947,11 +950,15 @@ def mos_niriss_parser(app, data_dir, instrument=None,
             print(f"Loading: {flabel} sources")
 
             with fits.open(fname, memmap=False) as temp:
+                ext_names = [hdu.name for hdu in temp]
                 # Filter out HDUs we care about
                 if cat_id_dict is not None:
-                    filtered_hdul = fits.HDUList([hdu for hdu in temp if (
-                        (hdu.name in ('PRIMARY', 'ASDF')) or
-                        (hdu.header.get('SOURCEID', None) in cat_id_dict.keys()))])
+                    if ext_names.count("EXTRACT1D") == 1:
+                        filtered_hdul = fits.HDUList([hdu for hdu in temp])
+                    else:
+                        filtered_hdul = fits.HDUList([hdu for hdu in temp if (
+                            (hdu.name in ('PRIMARY', 'ASDF')) or
+                            (hdu.header.get('SOURCEID', None) in cat_id_dict.keys()))])
                 else:
                     filtered_hdul = temp
 
@@ -977,12 +984,22 @@ def mos_niriss_parser(app, data_dir, instrument=None,
                 # Orientation denoted by "C", "R", or "C+R" for combined spectra
                 orientation = flabel.split()[-1]
 
+                # if newer format, only get source in cat_id_dict
+                if ext_names.count("EXTRACT1D") == 1:
+                    specs = [sp for sp in specs if int(sp.meta['source_id']) in cat_id_dict.keys()]
+
+                sourceid_idx = np.argsort([sp.meta['header']['SOURCEID'] if 'SOURCEID' in sp.meta['header'] else sp.meta['source_id'] for sp in specs])
+                specs = np.array(specs)[sourceid_idx]
+    
                 # update 1D labels and standardize metadata for table viewer
                 for sp in specs:
                     if (
                         sp.meta['header']['SPORDER'] == 1
                         and sp.meta['header']['EXTNAME'] == 'EXTRACT1D'
                     ):
+                        # if newer format, get source_id in metadata
+                        if ext_names.count("EXTRACT1D") == 1:
+                            sp.meta['header']['SOURCEID'] = int(sp.meta['source_id'])
                         sp.meta = standardize_metadata(sp.meta)
                         sp.meta['mosviz_row'] = len(spec_labels_1d)
                         label = (f"{filter_name} Source "
