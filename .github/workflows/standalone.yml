@@ -157,10 +157,11 @@ jobs:
       # but dmg also works
       # see https://github.com/glue-viz/glue-standalone-apps/blob/main/.github/workflows/build_stable.yml
       run: |
+        echo "$(pwd)"
+        cd standalone
+        
         pip install dmgbuild
         rm -rf standalone/dist/jdaviz
-        echo "$(pwd)"
-        cd ../standalone
         echo "$(pwd)"
         dmgbuild -s ./dmgbuild_settings.py -D app=./dist/Jdaviz.app "Jdaviz" ./dist/Jdaviz.dmg
         # hdiutil create -volname "Jdaviz" -srcfolder standalone/dist -ov -format UDZO standalone/dist/jdaviz.dmg
