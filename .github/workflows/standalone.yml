@@ -117,12 +117,12 @@ jobs:
         os: [macos-14]
     steps:
     # osx signing based on https://melatonin.dev/blog/how-to-code-sign-and-notarize-macos-audio-plugins-in-ci/
-    - name: Import Certificates (macOS)
-      uses: apple-actions/import-codesign-certs@5142e029c445c10ffc7149d172e540235a065466  # v7.0.0
-      if: ${{ matrix.os == 'macos-14' }}
-      with:
-        p12-file-base64: ${{ secrets.DEV_ID_APP_CERT }}
-        p12-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
+    # - name: Import Certificates (macOS)
+    #   uses: apple-actions/import-codesign-certs@5142e029c445c10ffc7149d172e540235a065466  # v7.0.0
+    #   if: ${{ matrix.os == 'macos-14' }}
+    #   with:
+    #     p12-file-base64: ${{ secrets.DEV_ID_APP_CERT }}
+    #     p12-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
 
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       with:
@@ -161,7 +161,7 @@ jobs:
       # but dmg also works
       # see https://github.com/glue-viz/glue-standalone-apps/blob/main/.github/workflows/build_stable.yml
       run: |
-        rm -rf ./dist/jdaviz
+        rm -rf standalone/dist/jdaviz
         dmgbuild -s standalone/dmgbuild_settings.py -D app=standalone/dist/Jdaviz.app "Jdaviz" standalone/dist/Jdaviz.dmg
         # hdiutil create -volname "Jdaviz" -srcfolder standalone/dist -ov -format UDZO standalone/dist/jdaviz.dmg
 
