@@ -150,6 +150,7 @@ jobs:
         codesign --deep --force --options=runtime --entitlements ../entitlements.plist --sign ${{ secrets.DEVELOPER_ID_APPLICATION }} --timestamp Jdaviz.app
 
     - name: Install dmgbuild
+      if: ${{ always() && (matrix.os == 'macos-14') }}
       run: pip install dmgbuild 
       
     - name: Create dmg (OSX)
