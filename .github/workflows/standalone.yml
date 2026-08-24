@@ -158,7 +158,7 @@ jobs:
       # see https://github.com/glue-viz/glue-standalone-apps/blob/main/.github/workflows/build_stable.yml
       run: |
         echo "$(pwd)"
-        cd standalone
+        cd ../
         
         pip install dmgbuild
         rm -rf ./dist/jdaviz
