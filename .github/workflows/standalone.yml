@@ -158,12 +158,12 @@ jobs:
       # see https://github.com/glue-viz/glue-standalone-apps/blob/main/.github/workflows/build_stable.yml
       run: |
         echo "$(pwd)"
-        cd standalone/dist
+        cd standalone
         
         pip install dmgbuild
-        rm -rf standalone/dist/jdaviz
+        rm -rf ./dist/jdaviz
         echo "$(pwd)"
-        dmgbuild -s ../dmgbuild_settings.py -D app=dist/Jdaviz.app "Jdaviz" dist/Jdaviz.dmg
+        dmgbuild -s ./dmgbuild_settings.py -D app=./dist/Jdaviz.app "Jdaviz" ./dist/Jdaviz.dmg
         # hdiutil create -volname "Jdaviz" -srcfolder standalone/dist -ov -format UDZO standalone/dist/jdaviz.dmg
 
   #   - name: Notary step + stapling (OSX)
