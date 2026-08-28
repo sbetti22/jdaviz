@@ -54,6 +54,10 @@ def main(filepaths=None, layout='default', instrument=None, browser='default',
         file_list = [pathlib.Path(f[0]).absolute().as_posix() for f in filepaths]
     else:
         file_list = []
+        env_paths = os.environ.get('JDAVIZ_OPEN_FILES', '')
+        if env_paths:
+            file_list = [pathlib.Path(p).expanduser().absolute().as_posix()
+                         for p in env_paths.split(os.pathsep) if p]
 
     if layout == 'flexible' and filepaths and not file_formats:
         raise ValueError("'file_formats' argument is required for flexible Jdaviz "

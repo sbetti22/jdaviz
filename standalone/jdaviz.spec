@@ -28,7 +28,7 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=datas,
-    hiddenimports=["rich.logging", 'glue.plugins.coordinate_helpers', 'glue.plugins.coordinate_helpers.link_helpers'],
+    hiddenimports=["rich.logging", 'glue.plugins.coordinate_helpers', 'glue.plugins.coordinate_helpers.link_helpers', 'AppKit', 'Foundation', 'objc'],
     hookspath=["hooks"],
     hooksconfig={},
     runtime_hooks=[],
@@ -55,7 +55,6 @@ exe = EXE(
     upx=True,
     console=False,
     disable_windowed_traceback=False,
-    argv_emulation=False,
     target_arch=None,
     codesign_identity=codesign_identity,
     entitlements_file="entitlements.plist",
@@ -72,6 +71,20 @@ coll = COLLECT(
     # directory name: dist/jdaviz
     name="jdaviz",
 )
+# macOS Info.plist additions to register FITS document types
+plist = {
+    'NSPrincipalClass': 'NSApplication',
+    'NSAppleScriptEnabled': True,
+    'argv_emulation':True,
+    'CFBundleDocumentTypes': [
+        {
+            'CFBundleTypeExtensions': ['fits', 'fit', 'fts', 'fitz', 'ftz', 'fz', 'asdf'],
+            'CFBundleTypeName': 'FITS and ASDF files',
+            'CFBundleTypeRole': 'Viewer'
+        }
+    ]
+}
+
 app = BUNDLE(
     exe,
     coll,
@@ -80,4 +93,5 @@ app = BUNDLE(
     entitlements_file="entitlements.plist",
     bundle_identifier="edu.stsci.jdaviz",
     version=jdaviz.__version__,
+    info_plist=plist
 )
