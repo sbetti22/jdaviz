@@ -1,3 +1,4 @@
+import multiprocessing
 import sys
 # this avoids:
 # ValueError: Key backend: 'module://matplotlib_inline.backend_inline' is not a valid value for backend; supported values are [...]
@@ -102,6 +103,23 @@ def _install_macos_open_files_handler():
         except Exception:
             pass
 
+def _filter_python_runtime_args(argv):
+    """Drop runtime-only flags used by frozen Python and multiprocessing helpers."""
+    filtered = []
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg in {'-B', '-S', '-I'} or arg.startswith('-psn_'):
+            i += 1
+            continue
+        if arg == '-c' and i + 1 < len(argv):
+            cmd = argv[i + 1]
+            if 'multiprocessing.resource_tracker' in cmd or 'from multiprocessing.resource_tracker import main' in cmd:
+                i += 2
+                continue
+        filtered.append(arg)
+        i += 1
+    return filtered
 
 def _register_macos_finder_filepaths():
     """Store Finder-opened file paths for the CLI before multiprocessing boots."""
@@ -110,13 +128,15 @@ def _register_macos_finder_filepaths():
 
     _install_macos_open_files_handler()
 
-    candidates = list(sys.argv[1:])
+    candidates = _filter_python_runtime_args(list(sys.argv[1:]))
     try:
         from Foundation import NSProcessInfo
     except Exception:
         NSProcessInfo = None
     if NSProcessInfo is not None:
-        candidates.extend(str(arg) for arg in NSProcessInfo.processInfo().arguments()[1:])
+        candidates.extend(_filter_python_runtime_args([
+            str(arg) for arg in NSProcessInfo.processInfo().arguments()[1:]
+        ]))
 
     _save_open_files(candidates)
 
@@ -207,6 +227,7 @@ def detect_fileformat(filepath):
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     _register_macos_finder_filepaths()
 
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
@@ -229,29 +250,17 @@ if __name__ == "__main__":
         # This prevents Jdaviz from defaulting download_uri_to_path to the read-only _MEIPASS path
         os.chdir(user_home)
 
-    orig_args = sys.argv.copy()
-    args = [sys.argv.copy()[0]]
-
-    # fits_exts = {'.fits', '.fit', '.fts', '.fitz', '.ftz', '.fz', '.asdf'}
-    # converted = []
-    # for a in orig_args[1:]:
-    #     try:
-    #         p = Path(a)
-    #     except Exception:
-    #         continue
-    #     if p.exists() and p.suffix.lower() in fits_exts:
-    #         converted.append(str(Path(a).absolute()))
-
-    # for f in converted:
-    #     if not any((arg == '--filepath' and i + 1 < len(args) and args[i + 1] == f) for i, arg in enumerate(args)):
-    #         args.append("--filepath")
-    #         args.append(f)
+    orig_args = _filter_python_runtime_args(sys.argv.copy())
+    args = orig_args.copy()
 
     open_files = [p for p in os.environ.get('JDAVIZ_OPEN_FILES', '').split(os.pathsep) if p]
-    if open_files and not any(arg in {"-fp", "--filepath"} for arg in args):
-        for filepath in open_files:
+    existing_filepaths = set()
+    for i, arg in enumerate(args):
+        if arg in {"-fp", "--filepath"} and i + 1 < len(args):
+            existing_filepaths.add(args[i + 1])
+    for filepath in open_files:
+        if filepath not in args and filepath not in existing_filepaths:
             args.extend(["--filepath", filepath])
-
 
 
     # # Determine whether a layout argument was provided and whether it indicates 'flexible'
