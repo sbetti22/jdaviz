@@ -60,11 +60,11 @@ def _save_open_files(filepaths):
     return uniq
 
 def _install_macos_open_files_handler():
-    """Register the real Finder open-file callback used by macOS .app bundles.
+    """Register the Finder open-file callback in the standard AppKit delegate style.
 
-    Finder sends open-document events through AppKit, not argv, for free-standing macOS
-    apps. Registering a Cocoa open-files handler ensures the actual file path reaches the
-    Python process before multiprocessing spawns worker processes.
+    Finder sends document-open events through Cocoa, not argv. The app should handle
+    those events by storing the paths in JDAVIZ_OPEN_FILES and only then appending them
+    to sys.argv for the rest of the app startup sequence.
     """
     if sys.platform != "darwin" or not getattr(sys, "frozen", False):
         return
@@ -74,34 +74,48 @@ def _install_macos_open_files_handler():
     except Exception:
         return
 
+    try:
+        from Foundation import NSObject
+    except Exception:
+        NSObject = None
+
     nsapp = AppKit.NSApplication.sharedApplication()
 
-    def _open_files_handler(filenames):
+    def _handle_paths(filenames):
         paths = _save_open_files(filenames)
-        if paths:
-            for path in paths:
-                if path not in sys.argv:
-                    sys.argv.append(path)
-        return None
+        for path in paths:
+            if path not in sys.argv:
+                sys.argv.append(path)
+        return bool(paths)
+
+    def _open_files_handler(filenames):
+        return _handle_paths(filenames)
 
     try:
         nsapp.setOpenFilesHandler_(_open_files_handler)
     except Exception:
-        try:
-            from Foundation import NSObject
+        pass
 
-            class _FinderOpenFilesDelegate(NSObject):
-                def applicationOpenFiles_(self, _sender, filenames):
-                    paths = _save_open_files(filenames)
-                    for path in paths:
+    if NSObject is not None:
+        class _FinderOpenFilesDelegate(NSObject):
+            def applicationOpenFiles_(self, _sender, filenames):
+                return _handle_paths(filenames)
+
+            def applicationOpenURL_(self, _sender, url):
+                if url is not None:
+                    path = _normalize_macos_path(str(url))
+                    if path is not None:
+                        _save_open_files([path])
                         if path not in sys.argv:
                             sys.argv.append(path)
-                    return True
+                return True
 
+        try:
             delegate = _FinderOpenFilesDelegate.alloc().init()
             nsapp.setDelegate_(delegate)
         except Exception:
             pass
+
 
 def _filter_python_runtime_args(argv):
     """Drop runtime-only flags used by frozen Python and multiprocessing helpers."""
@@ -120,6 +134,7 @@ def _filter_python_runtime_args(argv):
         filtered.append(arg)
         i += 1
     return filtered
+
 
 def _register_macos_finder_filepaths():
     """Store Finder-opened file paths for the CLI before multiprocessing boots."""
@@ -261,7 +276,6 @@ if __name__ == "__main__":
     for filepath in open_files:
         if filepath not in args and filepath not in existing_filepaths:
             args.extend(["--filepath", filepath])
-
 
     # # Determine whether a layout argument was provided and whether it indicates 'flexible'
     has_layout = any((a == '--layout' or a.startswith('--layout=')) for a in orig_args)
