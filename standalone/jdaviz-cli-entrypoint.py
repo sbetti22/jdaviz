@@ -24,6 +24,16 @@ if __name__ == "__main__":
 
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
 
+        # Point directly to the certifi bundle extracted inside _MEIPASS
+        cert_path = os.path.join(sys._MEIPASS, 'certifi', 'cacert.pem')
+        
+        # If certifi is placed in the root of the bundle instead of a folder:
+        if not os.path.exists(cert_path):
+            cert_path = os.path.join(sys._MEIPASS, 'cacert.pem')
+            
+        os.environ['REQUESTS_CA_BUNDLE'] = cert_path
+        os.environ['SSL_CERT_FILE'] = cert_path
+
         # Define a safe user-writable path (e.g., user's home folder)
         user_home = Path.home() 
 
