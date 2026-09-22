@@ -124,6 +124,13 @@ jobs:
     - name: Install jdaviz
       run: pip install ".[test,qt]"
 
+    # - name: Install certifi and export SSL cert env
+    #   run: |
+    #     pip install "certifi"
+    #     CERT_PATH=$(python -c "import certifi; print(certifi.where())")
+    #     echo "SSL_CERT_FILE=$CERT_PATH" >> $GITHUB_ENV
+    #     echo "REQUESTS_CA_BUNDLE=$CERT_PATH" >> $GITHUB_ENV
+
     - name: Install pyinstaller
       run: pip install "pyinstaller"
 
