@@ -30,6 +30,7 @@ def _ensure_certifi_cafile():
         if os.path.exists(candidate):
             cafile = candidate
 
+    print('cafile', cafile)
     if cafile is None:
         cafile = certifi.where()
 
