@@ -16,52 +16,63 @@ def test_solara_basics(page: Page):
     # when jdaviz is loaded (button at the top left)
     page.locator("text=Welcome to Jdaviz").wait_for()
 
+    # Click the "Launch Jdaviz" image (has title="Launch Jdaviz" in launcher.vue)
+    page.locator("img[title='Launch Jdaviz']").first.click()
 
-def _ensure_certifi_cafile():
-    """
-    Ensure a usable CA bundle is available at runtime.
-    Prefer a certifi bundle extracted by PyInstaller (sys._MEIPASS) when frozen,
-    otherwise fall back to the installed certifi.
-    Do not override an explicitly set SSL_CERT_FILE.
-    """
-    cafile = None
-    if getattr(sys, "frozen", False):
-        candidate = os.path.join(sys._MEIPASS, "certifi", "cacert.pem")
-        if os.path.exists(candidate):
-            cafile = candidate
+    page.locator("text=Viewer").wait_for(timeout=15_000)
 
-    print('cafile', cafile)
-    if cafile is None:
-        cafile = certifi.where()
+    page.locator("text=Astroquery").first.click()
 
-    os.environ.setdefault("SSL_CERT_FILE", cafile)
+    page.locator("text=Input").wait_for(timeout=10_000)
 
-    print("SSL_CERT_FILE:", os.environ.get("SSL_CERT_FILE"))
-    print("ssl.get_default_verify_paths():", ssl.get_default_verify_paths())
+    source = page.get_by_label("Source/Coordinates").click()
+    source.fill("259.37380294, 43.20553169")
+
+    radius_field = page.get_by_label("Radius")
+    radius_field.fill("1")
+
+    # Select Unit to 'deg' (the label in the template is "Unit")
+    page.get_by_label("arcmin").click()
+    # choose 'deg' (change if different units are shown)
+    page.locator("text=arcmin").first.click()
+
+    # Set Telescope -> Gaia
+    page.get_by_label("Telescope").click()
+    page.locator("text=Gaia").first.click()
+
+    # Set Max Results to a small number to keep test quick
+    max_results = page.get_by_label("Max Results")
+    max_results.fill("10")
+
+    # Click the Query Archive button
+    page.locator("text=Query Archive").first.click()
+
+    # Wait for "Observations" table title to appear in the Query Results section
+    observations_locator = page.locator("text=Select Additional Columns")
+    observations_locator.wait_for(timeout=60_000)
+
+    page.get_by_label("Format").click()
+    page.locator("text=Catalog").first.click()
+
+    page.get_by_label("Viewer").click()
+    page.locator("text=Table").first.click()
+
+    page.locator("text=Import").first.click()
 
 
-def test_astroquery_gaia_can_query():
-    """
-    Simple runtime test: run a small Gaia ADQL query and ensure we get results.
-    This prefers a bundled certifi cacert.pem when running from a PyInstaller app
-    (so the frozen app can verify TLS).
-    """
-    _ensure_certifi_cafile()
+    page.locator("img[title='Launch Jdaviz']").first.click()
 
-    Gaia.ROW_LIMIT = 10
+    page.locator("img[src*='information-outline.svg']").first.click()
 
-    skycoord_center = SkyCoord(259.37380294, 43.20553169, unit='deg')
-    radius = 5 * u.arcmin
+    page.locator("text=Logger").first.click()
 
-    try:
-        output = Gaia.query_object(skycoord_center, radius=radius)
-    except Exception as e:
-        ssl_paths = ssl.get_default_verify_paths()
-        raise RuntimeError(
-            "Gaia query failed. SSL_CERT_FILE=%r, ssl.get_default_verify_paths()=%r, exception=%s"
-            % (os.environ.get("SSL_CERT_FILE"), ssl_paths, e)
-        ) from e
+    regex_pattern = r"(?i)catalog.*sucessfully added",
 
-    assert len(output) > 0, "Gaia query returned no rows; check network/endpoint and CA bundle"
+    loc = page.locator(f"text=/{pat}/")
+    loc.first.wait_for(timeout=5_000)
+    matched_text = loc.first.inner_text()
 
-    print(output[:1])
+    print("Found logger message matching catalog-added pattern:", matched_text)
+    assert re.search(r"(?i)catalog", matched_text)
+
+   
