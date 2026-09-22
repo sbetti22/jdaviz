@@ -100,18 +100,18 @@ jobs:
   # Do not want to deal with OSX certs in pull request builds.
   build_binary_osx:
     runs-on: ${{ matrix.os }}
-    if: (github.repository == 'spacetelescope/jdaviz' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'Build standalone')))
+    # if: (github.repository == 'spacetelescope/jdaviz' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'Build standalone')))
     strategy:
       matrix:
         os: [macos-14]
     steps:
     # osx signing based on https://melatonin.dev/blog/how-to-code-sign-and-notarize-macos-audio-plugins-in-ci/
-    - name: Import Certificates (macOS)
-      uses: apple-actions/import-codesign-certs@5142e029c445c10ffc7149d172e540235a065466  # v7.0.0
-      if: ${{ matrix.os == 'macos-14' }}
-      with:
-        p12-file-base64: ${{ secrets.DEV_ID_APP_CERT }}
-        p12-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
+    # - name: Import Certificates (macOS)
+    #   uses: apple-actions/import-codesign-certs@5142e029c445c10ffc7149d172e540235a065466  # v7.0.0
+    #   if: ${{ matrix.os == 'macos-14' }}
+    #   with:
+    #     p12-file-base64: ${{ secrets.DEV_ID_APP_CERT }}
+    #     p12-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
 
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
@@ -139,46 +139,46 @@ jobs:
         DEVELOPER_ID_APPLICATION: ${{ secrets.DEVELOPER_ID_APPLICATION }}
       run: (cd standalone; pyinstaller ./jdaviz.spec)
 
-    - name: Codesign (OSX)
-      if: ${{ matrix.os == 'macos-14' }}
-      run: |
-        cd standalone/dist
-        codesign --deep --force --options=runtime --entitlements ../entitlements.plist --sign ${{ secrets.DEVELOPER_ID_APPLICATION }} --timestamp jdaviz.app
+    # - name: Codesign (OSX)
+    #   if: ${{ matrix.os == 'macos-14' }}
+    #   run: |
+    #     cd standalone/dist
+    #     codesign --deep --force --options=runtime --entitlements ../entitlements.plist --sign ${{ secrets.DEVELOPER_ID_APPLICATION }} --timestamp jdaviz.app
 
-    - name: Install dmgbuild
-      run: pip install dmgbuild 
+    # - name: Install dmgbuild
+    #   run: pip install dmgbuild 
           
-    - name: Create dmg (OSX)
-      # if we do not call always() GHA will && with success()
-      if: ${{ always() && (matrix.os == 'macos-14') }}
-      # it seems ditto (not zip) should be used in combination with notarization
-      # see https://developer.apple.com/forums/thread/116831
-      # but dmg also works
-      # see https://github.com/glue-viz/glue-standalone-apps/blob/main/.github/workflows/build_stable.yml
-      run: |
-        rm -rf standalone/dist/jdaviz
-        dmgbuild -s standalone/dmgbuild_settings.py -D app=standalone/dist/Jdaviz.app "Jdaviz" standalone/dist/Jdaviz.dmg
-        # hdiutil create -volname "Jdaviz" -srcfolder standalone/dist -ov -format UDZO standalone/dist/jdaviz.dmg
+    # - name: Create dmg (OSX)
+    #   # if we do not call always() GHA will && with success()
+    #   if: ${{ always() && (matrix.os == 'macos-14') }}
+    #   # it seems ditto (not zip) should be used in combination with notarization
+    #   # see https://developer.apple.com/forums/thread/116831
+    #   # but dmg also works
+    #   # see https://github.com/glue-viz/glue-standalone-apps/blob/main/.github/workflows/build_stable.yml
+    #   run: |
+    #     rm -rf standalone/dist/jdaviz
+    #     dmgbuild -s standalone/dmgbuild_settings.py -D app=standalone/dist/Jdaviz.app "Jdaviz" standalone/dist/Jdaviz.dmg
+    #     # hdiutil create -volname "Jdaviz" -srcfolder standalone/dist -ov -format UDZO standalone/dist/jdaviz.dmg
     
-    - name: Notary step + stapling (OSX)
-      if: ${{ matrix.os == 'macos-14' }}
-      run: |
-        output=$(xcrun notarytool submit standalone/dist/jdaviz.dmg --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --team-id ${{ secrets.TEAM_ID }} --wait --password ${{ secrets.NOTARIZATION_PASSWORD }}) || true
-        echo "$output"
-        uuid=$(echo "$output" | awk -F '[ :]+' '/id:/ {print $3; exit}')
-        echo "UUID: $uuid"
-        if [[ $output == *"status: Accepted"* ]]; then
-          echo "Great, notarization succeeded, staple it!"
-          xcrun stapler staple standalone/dist/jdaviz.dmg
-        else
-          echo "Log output for failed notarization: $uuid"
-          xcrun notarytool log --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --team-id ${{ secrets.TEAM_ID }} --password ${{ secrets.NOTARIZATION_PASSWORD }} $uuid || true
-        fi
+    # - name: Notary step + stapling (OSX)
+    #   if: ${{ matrix.os == 'macos-14' }}
+    #   run: |
+    #     output=$(xcrun notarytool submit standalone/dist/jdaviz.dmg --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --team-id ${{ secrets.TEAM_ID }} --wait --password ${{ secrets.NOTARIZATION_PASSWORD }}) || true
+    #     echo "$output"
+    #     uuid=$(echo "$output" | awk -F '[ :]+' '/id:/ {print $3; exit}')
+    #     echo "UUID: $uuid"
+    #     if [[ $output == *"status: Accepted"* ]]; then
+    #       echo "Great, notarization succeeded, staple it!"
+    #       xcrun stapler staple standalone/dist/jdaviz.dmg
+    #     else
+    #       echo "Log output for failed notarization: $uuid"
+    #       xcrun notarytool log --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --team-id ${{ secrets.TEAM_ID }} --password ${{ secrets.NOTARIZATION_PASSWORD }} $uuid || true
+    #     fi
 
-    - name: Validate app (OSX)
-      if: ${{ matrix.os == 'macos-14' }}
-      run: |
-        spctl -a -vvv -t execute standalone/dist/jdaviz.app
+    # - name: Validate app (OSX)
+    #   if: ${{ matrix.os == 'macos-14' }}
+    #   run: |
+    #     spctl -a -vvv -t execute standalone/dist/jdaviz.app
 
     - name: Run jdaviz cmd in background
       if: ${{ matrix.os == 'macos-14' }}
@@ -201,16 +201,16 @@ jobs:
     - name: Test standalone
       run: (cd standalone; touch pytest.ini; JUPYTER_PLATFORM_DIRS=1 pytest test_standalone.py --video=on)
 
-    - name: Upload Test artifacts
-      if: always()
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-      with:
-        name: test-results-macosx
-        path: standalone/test-results
+    # - name: Upload Test artifacts
+    #   if: always()
+    #   uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+    #   with:
+    #     name: test-results-macosx
+    #     path: standalone/test-results
 
-    - name: Upload jdaviz standalone (OSX)
-      if: ${{ always() && (matrix.os == 'macos-14') }}
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
-      with:
-        name: jdaviz-standlone-macosx
-        path: standalone/dist/Jdaviz.dmg
+    # - name: Upload jdaviz standalone (OSX)
+    #   if: ${{ always() && (matrix.os == 'macos-14') }}
+    #   uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+    #   with:
+    #     name: jdaviz-standlone-macosx
+    #     path: standalone/dist/Jdaviz.dmg
