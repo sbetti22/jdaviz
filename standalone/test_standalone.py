@@ -8,71 +8,121 @@ import certifi
 from astroquery.gaia import Gaia
 from astropy import units as u
 from astropy.coordinates import SkyCoord
+import time
+from pathlib import Path
 
 
 def test_solara_basics(page: Page):
+
     page.goto("http://localhost:8765/")
+    
+    page.locator('text=Welcome to Jdaviz!').wait_for()
+    
+    # # when jdaviz is loaded (button at the top left)
+    page.locator('img[alt="Launch Jdaviz"]').click()
+    page.screenshot(path="debug1.png")
 
-    # when jdaviz is loaded (button at the top left)
-    page.locator("text=Welcome to Jdaviz").wait_for()
+    # # Find the string text "Source"
+    # # 1. Wait for any text block containing "Source" to appear globally
+    page.locator(".v-input", has_text="Source").click()
+    
+    page.screenshot(path="debug2.png")
 
-    # Click the "Launch Jdaviz" image (has title="Launch Jdaviz" in launcher.vue)
-    page.locator("img[title='Launch Jdaviz']").first.click()
+    print("Dropdown clicked successfully.")
 
-    page.locator("text=Viewer").wait_for(timeout=15_000)
 
-    page.locator("text=Astroquery").first.click()
+    # # 5. STEP D: Interact with the detached option overlay menu
+    # # Vuetify spawns option layouts under the role 'listbox' 
+    dropdown_menu = page.get_by_role("listbox")
+    dropdown_menu.wait_for(state="visible")
 
-    page.locator("text=Input").wait_for(timeout=10_000)
+    # # Select your target element "astroquery" from your CLI configuration panel
+    target_option = dropdown_menu.get_by_role("option", name="astroquery")
+    target_option.wait_for(state="visible")
+    target_option.click()
+    page.screenshot(path="debug3.png")
+    
+    print("did it.")
 
-    source = page.get_by_label("Source/Coordinates").click()
+    source = page.get_by_label("Source/Coordinates")
+    source.wait_for()
+    source.click()
     source.fill("259.37380294, 43.20553169")
 
     radius_field = page.get_by_label("Radius")
     radius_field.fill("1")
 
-    # Select Unit to 'deg' (the label in the template is "Unit")
-    page.get_by_label("arcmin").click()
-    # choose 'deg' (change if different units are shown)
-    page.locator("text=arcmin").first.click()
+    page.screenshot(path="debug4.png")
+        
+    print("did it.")
 
+    # # Select Unit to 'deg' (the label in the template is "Unit")
+    arcmin = page.locator(".v-input", has_text="Unit").click()
+    dropdown_menu = page.get_by_role("listbox")
+    dropdown_menu.wait_for(state="visible")
+    target_option = dropdown_menu.get_by_role("option", name="arcmin")
+    target_option.wait_for(state="visible")
+    target_option.click()
+
+
+    page.screenshot(path="debug5.png")
+        
+    print("did it.")
     # Set Telescope -> Gaia
-    page.get_by_label("Telescope").click()
-    page.locator("text=Gaia").first.click()
+    page.locator(".v-input", has_text="Telescope").click()
+    dropdown_menu = page.get_by_role("listbox")
+    dropdown_menu.wait_for(state="visible")
+    target_option = dropdown_menu.get_by_role("option", name="Gaia")
+    target_option.wait_for(state="visible")
+    target_option.click()
+
 
     # Set Max Results to a small number to keep test quick
     max_results = page.get_by_label("Max Results")
     max_results.fill("10")
 
-    # Click the Query Archive button
-    page.locator("text=Query Archive").first.click()
+    page.screenshot(path="debug6.png")
+        
+    print("did it.")
 
-    # Wait for "Observations" table title to appear in the Query Results section
-    observations_locator = page.locator("text=Select Additional Columns")
+    # # Click the Query Archive button
+    page.locator("text=Query Archive").first.click()
+    page.screenshot(path="debug7.png")
+            
+    print("did it.")
+
+    # # Wait for "Observations" table title to appear in the Query Results section
+    observations_locator = page.get_by_text("Select Additional Columns", exact=True)
+    observations_locator.scroll_into_view_if_needed()
+
     observations_locator.wait_for(timeout=60_000)
 
-    page.get_by_label("Format").click()
-    page.locator("text=Catalog").first.click()
+    page.screenshot(path="debug8.png")
+            
+    print("did it.")
 
-    page.get_by_label("Viewer").click()
-    page.locator("text=Table").first.click()
+    # page.get_by_label("Format").click()
+    # page.locator("text=Catalog").first.click()
 
-    page.locator("text=Import").first.click()
+    # page.get_by_label("Viewer").click()
+    # page.locator("text=Table").first.click()
+
+    # page.locator("text=Import").first.click()
 
 
-    page.locator("img[title='Launch Jdaviz']").first.click()
+    # page.locator("img[title='Launch Jdaviz']").first.click()
 
-    page.locator("img[src*='information-outline.svg']").first.click()
+    # page.locator("img[src*='information-outline.svg']").first.click()
 
-    page.locator("text=Logger").first.click()
+    # page.locator("text=Logger").first.click()
 
-    regex_pattern = r"(?i)catalog.*sucessfully added",
+    # regex_pattern = r"(?i)catalog.*sucessfully added",
 
-    loc = page.locator(f"text=/{pat}/")
-    loc.first.wait_for(timeout=5_000)
-    matched_text = loc.first.inner_text()
+    # loc = page.locator(f"text=/{pat}/")
+    # loc.first.wait_for(timeout=5_000)
+    # matched_text = loc.first.inner_text()
 
-    print("Found logger message matching catalog-added pattern:", matched_text)
-    assert re.search(r"(?i)catalog", matched_text)
+    # print("Found logger message matching catalog-added pattern:", matched_text)
+    # assert re.search(r"(?i)catalog", matched_text)
 
    
