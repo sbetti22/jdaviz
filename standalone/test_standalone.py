@@ -101,28 +101,36 @@ def test_solara_basics(page: Page):
             
     print("did it.")
 
-    # page.get_by_label("Format").click()
-    # page.locator("text=Catalog").first.click()
+    page.locator(".v-input", has_text="Format").click()
+    dropdown_menu = page.get_by_role("listbox")
+    dropdown_menu.wait_for(state="visible")
+    target_option = dropdown_menu.get_by_role("option", name="Catalog")
+    target_option.wait_for(state="visible")
+    target_option.click()
 
-    # page.get_by_label("Viewer").click()
-    # page.locator("text=Table").first.click()
 
-    # page.locator("text=Import").first.click()
+    page.screenshot(path="debug9.png")
+            
+    print("did it9.")
 
+    impor = page.get_by_role("button", name="Import")
+    impor.scroll_into_view_if_needed()
+    impor.first.click()
 
-    # page.locator("img[title='Launch Jdaviz']").first.click()
+    page.get_by_label("Metadata, mouseover markers, and logger").click()
+    page.locator("text=Logger").first.click()
 
-    # page.locator("img[src*='information-outline.svg']").first.click()
+    page.screenshot(path="debug10.png")
+            
+    print("did it10.")
 
-    # page.locator("text=Logger").first.click()
+    regex_pattern = r"(?i)catalog.*sucessfully added",
 
-    # regex_pattern = r"(?i)catalog.*sucessfully added",
+    loc = page.locator(f"text=/{pat}/")
+    loc.first.wait_for(timeout=5_000)
+    matched_text = loc.first.inner_text()
 
-    # loc = page.locator(f"text=/{pat}/")
-    # loc.first.wait_for(timeout=5_000)
-    # matched_text = loc.first.inner_text()
-
-    # print("Found logger message matching catalog-added pattern:", matched_text)
-    # assert re.search(r"(?i)catalog", matched_text)
+    print("Found logger message matching catalog-added pattern:", matched_text)
+    assert re.search(r"(?i)catalog", matched_text)
 
    
