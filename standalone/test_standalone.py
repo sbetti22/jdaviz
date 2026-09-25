@@ -67,7 +67,6 @@ def test_solara_astroquery_gaia(page: Page):
 
     # click the Query Archive button
     page.locator("text=Query Archive").first.click()
-    page.screenshot(path="debug7.png")
 
     print("Queried Gaia sucessfully")
 
