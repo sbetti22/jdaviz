@@ -9,6 +9,8 @@ def test_solara_basics(page: Page):
 
 def test_solara_astroquery_gaia(page: Page):
 
+    print('Testing Astroquery with Gaia loads')
+
     page.goto("http://localhost:8765/")
     page.locator('text=Welcome to Jdaviz!').wait_for()
 
