@@ -69,10 +69,10 @@ def test_solara_astroquery_gaia(page: Page):
 
     print("Queried Gaia sucessfully")
 
-    # wait for table information to appear in the Query Results section
-    table_cols = page.get_by_text("Select Additional Columns", exact=True)
-    table_cols.scroll_into_view_if_needed()
-    table_cols.wait_for(timeout=60_000)
+    # # wait for table information to appear in the Query Results section
+    # table_cols = page.get_by_text("Select Additional Columns", exact=True)
+    # table_cols.scroll_into_view_if_needed()
+    # table_cols.wait_for(timeout=60_000)
 
     # select format as catalog
     page.locator(".v-input", has_text="Format").click()
@@ -84,7 +84,7 @@ def test_solara_astroquery_gaia(page: Page):
 
     # import table as scatter plot
     import_table = page.get_by_role("button", name="Import")
-    import_table.scroll_into_view_if_needed()
+    # import_table.scroll_into_view_if_needed()
     import_table.first.click()
 
     print('Imported Catalog sucessfully.')
