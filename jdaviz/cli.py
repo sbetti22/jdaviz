@@ -3,8 +3,7 @@
 import inspect
 import os
 import pathlib
-
-from jdaviz import __version__
+from jdaviz import __version__, __file__
 from jdaviz.app import ALL_JDAVIZ_CONFIGS
 from jdaviz.configs.default.plugins.logger import _verbosity_levels
 from jdaviz import configs
@@ -17,24 +16,9 @@ DEFAULT_VERBOSITY = 'warning'
 DEFAULT_HISTORY_VERBOSITY = 'info'
 
 
-def _normalize_file_list(values):
-    """Return a flat list of strings from argparse or public API inputs."""
-    if values is None:
-        return []
-
-    normalized = []
-    for value in values:
-        if isinstance(value, (list, tuple)):
-            normalized.extend(_normalize_file_list(value))
-        elif value is not None:
-            normalized.append(str(value))
-    return normalized
-
-
 def main(filepaths=None, layout='default', instrument=None, browser='default',
          theme='auto', verbosity=DEFAULT_VERBOSITY, history_verbosity=DEFAULT_HISTORY_VERBOSITY,
-         host='localhost', port=0, hotreload=False, file_formats=None,
-         clicked_filepaths=None):
+         host='localhost', port=0, hotreload=False, file_formats=None):
     """
     Start a Jdaviz application instance with data loaded from FILENAME.
 
@@ -44,8 +28,6 @@ def main(filepaths=None, layout='default', instrument=None, browser='default',
         List of paths to the file(s) to be loaded into the Jdaviz application.
     file_formats : list of str, optional
         List of file formats for loading, one for each filepath
-    clicked_filepaths : list of str, optional
-        Local file paths to add as pending preset loaders instead of loading immediately.
     layout : str, optional
         Optional specification for which configuration to use on startup.
     instrument : str, optional
@@ -67,22 +49,14 @@ def main(filepaths=None, layout='default', instrument=None, browser='default',
     """
 
     if filepaths:
-        # Convert paths to posix string; windows paths are not JSON compliant.
-        file_list = [pathlib.Path(p).expanduser().absolute().as_posix()
-                     for p in _normalize_file_list(filepaths)]
-
+        # Convert paths to posix string; windows paths are not JSON compliant
+        file_list = [pathlib.Path(f[0]).absolute().as_posix() for f in filepaths]
     else:
         file_list = []
 
-    clicked_file_list = [str(pathlib.Path(p).expanduser().absolute())
-                         for p in _normalize_file_list(clicked_filepaths)]
-
-    if layout == 'flexible' and file_list and not file_formats:
+    if layout == 'flexible' and filepaths and not file_formats:
         raise ValueError("'file_formats' argument is required for flexible Jdaviz "
                          "layout when loading files")
-
-    if clicked_file_list and layout != 'flexible':
-        raise ValueError("Clicked files are available only with the flexible Jdaviz layout.")
 
     if layout == '' and len(file_list) > 1:
         raise ValueError("'layout' argument is required when specifying multiple files")
@@ -94,14 +68,8 @@ def main(filepaths=None, layout='default', instrument=None, browser='default',
     from jdaviz import solara
     solara.config = layout.capitalize()
     solara.data_list = file_list
-    solara.clicked_file_paths = clicked_file_list
     if file_formats is not None:
-        format_list = _normalize_file_list(file_formats)
-        if len(format_list) == 1 and len(file_list) > 1:
-            format_list = format_list * len(file_list)
-        if len(format_list) < len(file_list):
-            format_list = format_list + [''] * (len(file_list) - len(format_list))
-        solara.format_list = [str(f).title() for f in format_list[:len(file_list)]]
+        solara.format_list = [f[0].title() for f in file_formats]
 
     if layout == 'mosviz':
         solara.load_data_kwargs = {'instrument': instrument}
@@ -113,10 +81,31 @@ def main(filepaths=None, layout='default', instrument=None, browser='default',
 
 def run_solara(host, port, theme, browser, production: bool = True):
     os.environ["SOLARA_APP"] = "jdaviz.solara"
+    import jinja2
+    import solara.server.server
     import solara.server.starlette
     import solara.server.settings
+
+    # gets jdaviz/templates
+    jdaviz_templates = pathlib.Path(__file__).resolve().parent / "templates"
+    jdaviz_loader = jinja2.FileSystemLoader(jdaviz_templates)
+
+    # Grab a reference to the existing memoized function
+    solara_loader = solara.server.server.get_jinja_env("__default__")
+
+    def get_jinja_env(app_name: str) -> jinja2.Environment:
+        if (not isinstance(solara_loader.loader, jinja2.ChoiceLoader) or
+                jdaviz_loader not in solara_loader.loader.loaders):
+
+            solara_loader.loader = jinja2.ChoiceLoader([jdaviz_loader, solara_loader.loader])
+        return solara_loader
+
+    solara.server.server.get_jinja_env = get_jinja_env
+
     solara.server.settings.theme.variant = theme
-    solara.server.settings.theme.loader = "plain"
+    # solara.server.settings.theme.loader = "plain"
+    solara.server.settings.theme.loader = "custom"
+    solara.server.settings.theme.title = 'Jdaviz'
     solara.server.settings.main.mode = "production" if production else "development"
 
     server = solara.server.starlette.ServerStarlette(host="localhost", port=port)
@@ -158,7 +147,6 @@ def _main(config=None):
                         help=('The format of a file to be loaded into the Jdaviz application.'
                               'The same number of filepath and file_format arguments must '
                               'be specified, and will be associated based on input order.'))
-    parser.add_argument('--clicked-file', action='append', default=[], help=argparse.SUPPRESS)
     parser.add_argument('--instrument', type=str, default='nirspec',
                         help='Manually specifies which instrument parser to use, for Mosviz')
     parser.add_argument('--browser', type=str, default='default',
@@ -187,11 +175,9 @@ def _main(config=None):
     else:
         layout = config
 
-    main(
-        filepaths=args.filepath, layout=layout, instrument=args.instrument, browser=args.browser,
-        theme=args.theme, verbosity=args.verbosity, history_verbosity=args.history_verbosity,
-        host=args.host, port=args.port, hotreload=args.hotreload, file_formats=args.file_format,
-        clicked_filepaths=args.clicked_file)
+    main(filepaths=args.filepath, layout=layout, instrument=args.instrument, browser=args.browser,
+         theme=args.theme, verbosity=args.verbosity, history_verbosity=args.history_verbosity,
+         host=args.host, port=args.port, hotreload=args.hotreload, file_formats=args.file_format)
 
 
 def _specviz():

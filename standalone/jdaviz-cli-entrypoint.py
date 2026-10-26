@@ -8,10 +8,56 @@ if __name__ == "__main__":
 import os
 from pathlib import Path
 from urllib.parse import unquote, urlparse
+from qtpy import QtCore
+from qtpy.QtGui import QPixmap
+from qtpy.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
+# from jdaviz.core.open_file_requests import OpenFileRequestServer
 
-import jdaviz.cli
-from jdaviz.core.open_file_requests import OpenFileRequestServer
 
+_STARTUP_APP = None
+_STARTUP_SPLASH = None
+
+def _show_early_splash():
+    global _STARTUP_APP, _STARTUP_SPLASH
+    _STARTUP_APP = QApplication.instance() or QApplication([])
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        source_root = Path(sys._MEIPASS)
+    else:
+        source_root = Path(__file__).resolve().parent.parent
+    pixmap = QPixmap(str(source_root / "jdaviz/data/icons/jdaviz_logo.png"))
+
+    _STARTUP_SPLASH = QWidget()
+    _STARTUP_SPLASH.setObjectName("jdavizStartupSplash")
+    _STARTUP_SPLASH.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint |
+                                   QtCore.Qt.FramelessWindowHint)
+    _STARTUP_SPLASH.setWindowTitle("Setting up Jdaviz")
+
+    layout = QVBoxLayout(_STARTUP_SPLASH)
+    logo = QLabel()
+
+    logo.setAlignment(QtCore.Qt.AlignCenter)
+    logo.setPixmap(pixmap.scaled(320, 320, QtCore.Qt.KeepAspectRatio,
+                                 QtCore.Qt.SmoothTransformation))
+    _STARTUP_SPLASH.setStyleSheet("background-color: white")
+    message = QLabel("Jdaviz is being set up...")
+    font = message.font()
+    font.setPointSize(20) 
+    message.setFont(font)
+    message.setAlignment(QtCore.Qt.AlignCenter)
+
+    message2 = QLabel("(JAY-dee-a-viz)")
+    font = message2.font()
+    font.setPointSize(14) 
+    message.setFont(font)
+    message2.setAlignment(QtCore.Qt.AlignCenter)
+
+    layout.addWidget(message)
+    layout.addWidget(message2)
+    layout.addWidget(logo)
+    _STARTUP_SPLASH.show()
+    _STARTUP_APP.processEvents()
+
+_show_early_splash()
 
 OPEN_FILE_PATHS = []
 OPEN_FILE_CALLBACK = None
@@ -214,6 +260,8 @@ def _prepare_cli_args(argv, clicked_files):
 
 
 def _run():
+    import jdaviz.cli
+
     def dispatch_file_open(paths):
         from jdaviz.solara import receive_clicked_file_paths
         receive_clicked_file_paths(paths)
@@ -223,10 +271,10 @@ def _run():
     clicked_files = _register_os_opened_files(sys.argv[1:])
     _debug_open_event('clicked files passed to app', paths=clicked_files)
 
-    instance_server = OpenFileRequestServer(dispatch_file_open)
-    if not instance_server.is_primary:
-        instance_server.forward_or_raise(clicked_files)
-        return
+    # instance_server = OpenFileRequestServer(dispatch_file_open)
+    # if not instance_server.is_primary:
+    #     instance_server.forward_or_raise(clicked_files)
+        # return
 
     import matplotlib_inline
     import matplotlib_inline.backend_inline  # noqa: F401

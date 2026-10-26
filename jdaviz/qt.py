@@ -112,7 +112,7 @@ def clear_cache(clear_all=False):
             else:
                 # go through all files and folders (inc. subfolders).
                 # files will be deleted first then folder checked to see if it is empty.
-                for fil in list(Path(cache_dir).rglob("*"))[::-1]:
+                    for fil in list(Path(cache_dir).rglob("*"))[::-1]:
                     # delete files > 4 weeks AND hidden files
                     if fil.is_file():
                         file_modified_time = os.path.getmtime(fil)
@@ -130,11 +130,15 @@ def clear_cache(clear_all=False):
 
 
 def run_qt(url, app_name="Jdaviz"):
-    app = QApplication([])
-    window_container = QWidget()
-    web = QWebEngineViewWithPopup()
-    web.setUrl(QtCore.QUrl(url))
+    app = QApplication.instance() or QApplication([])
+    splash = next((widget for widget in app.topLevelWidgets()
+                   if widget.objectName() == "jdavizStartupSplash" and widget.isVisible()), None)
 
+    web = QWebEngineViewWithPopup()
+    if splash is not None:
+        web.loadFinished.connect(lambda _success: splash.close())
+
+    window_container = QWidget()
     layout = QVBoxLayout(window_container)
     layout.setContentsMargins(0, 0, 0, 0)
     layout.setSpacing(0)
@@ -306,6 +310,7 @@ def run_qt(url, app_name="Jdaviz"):
 
     window_container.resize(1024, 1024)
     window_container.show()
+    web.setUrl(QtCore.QUrl(url))
 
     app.setApplicationDisplayName(app_name)
     app.setApplicationName(app_name)
