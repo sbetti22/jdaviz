@@ -81,9 +81,8 @@ def _should_show_startup_splash(args):
 
 if __name__ == "__main__":
 
-    if sys.platform.startswith('darwin'):
-        if _should_show_startup_splash(sys.argv[1:]):
-            _show_early_splash()
+    if _should_show_startup_splash(sys.argv[1:]):
+        _show_early_splash()
 
     # This avoids a backend error when the CLI imports pyplot. Importing the
     # backend here also makes PyInstaller include and register it.
