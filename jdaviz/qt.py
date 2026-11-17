@@ -134,9 +134,9 @@ def clear_cache(clear_all=False):
 
 def run_qt(url, app_name="Jdaviz"):
     app = QApplication.instance() or QApplication([])
-    web = QWebEngineViewWithPopup()
     splash = next((widget for widget in app.topLevelWidgets()
-                if widget.objectName() == "jdavizStartupSplash" and widget.isVisible()), None)
+                   if widget.objectName() == "jdavizStartupSplash" and widget.isVisible()), None)
+    web = QWebEngineViewWithPopup()
     if splash is not None:
         web.loadFinished.connect(lambda _success: splash.close())
     web.setUrl(QtCore.QUrl(url))
