@@ -50,10 +50,10 @@ jobs:
     - name: Install jdaviz
       run: pip install ".[test,qt]"
 
-    - name: Pin Solara for standalone
-      # Solara 1.66 changed the initial app-loading lifecycle; 1.64.1 is the
-      # latest version verified by the standalone smoke test.
-      run: pip install "solara==1.64.1"
+    # - name: Pin Solara for standalone
+    #   # Solara 1.66 changed the initial app-loading lifecycle; 1.64.1 is the
+    #   # latest version verified by the standalone smoke test.
+    #   run: pip install "solara==1.64.1"
 
     - name: Install pyinstaller
       # see https://github.com/erocarrera/pefile/issues/420 for performance issues on
@@ -72,7 +72,7 @@ jobs:
         ASTROPY_ALLOW_INTERNET: "False"
       run: |
         # Start the app in the background so it immediately returns
-        ./standalone/dist/jdaviz/jdaviz-cli --port 8765 &
+        ./standalone/dist/jdaviz/jdaviz-cli --port 8765 --browser none &
         
     - name: Install playwright
       run: (pip install playwright; playwright install chromium)
