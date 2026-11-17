@@ -79,14 +79,14 @@ jobs:
       uses: ifaxity/wait-on-action@a7d13170ec542bdca4ef8ac4b15e9c6aa00a6866 # v1.2.1
       with:
         resource: tcp:8765
-        delay: 20000
         timeout: 60000
 
     - name: Test standalone
       run: (cd standalone; touch pytest.ini; JUPYTER_PLATFORM_DIRS=1 pytest test_standalone.py --video=on)
 
     - name: Upload Test artifacts
-      if: github.event_name != 'pull_request'
+      # if: github.event_name != 'pull_request'
+      if: ${{ always() && github.event_name != 'pull_request' }}
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: test-results-${{ contains(matrix.os, 'windows') && 'windows' || 'ubuntu' }}
